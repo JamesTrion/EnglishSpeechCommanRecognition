@@ -33,11 +33,6 @@ srmodel_list_t *models = NULL;
 
 void on_speech_command_detected(int command_id) 
 {
-    // Example: Command IDs mapping
-    // 0x01: "Hi ESP" (Wake Word)
-    // 0x02: Custom Command 1
-    // 0x03: Custom Command 2
-    
     app_usb_hid_send_command_id((uint8_t)command_id);
 }
 
@@ -88,7 +83,7 @@ void detect_Task(void *arg)
     lcd_text_alignment nAlignment=LCD_TEXT_ALIGN_MIDDLECENTER;          //default alignment
     char *display_text = GetCommandStringFromID(Command_ListeningForWakeword);
     lcd_text_print_ex(0, 120, display_text, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
-    
+    on_speech_command_detected((int)Command_ListeningForWakeword); //send the speech command id back.
 
     while (task_flag) 
     {
@@ -102,11 +97,12 @@ void detect_Task(void *arg)
         if (res->wakeup_state == WAKENET_DETECTED) 
         {
             printf("WAKEWORD DETECTED\n");
-            //app_lcd_set_status_text("Wakeword Detected!\nListening for Command...");
 
             lcd_text_print_ex(0, 120, 
                 GetCommandStringFromID(Command_WakewordDetected), 
                 RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+
+            on_speech_command_detected((int)Command_WakewordDetected); //send the speech command id back.
 
 	        multinet->clean(model_data);
         }
@@ -150,11 +146,6 @@ void detect_Task(void *arg)
                 snprintf(display_buf, sizeof(display_buf), "Command Detected: %s", GetCommandStringFromID(mn_result->command_id[0]));
                 lcd_text_print_ex(0, 120, display_buf, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
 
-                //marked by Trion on 2026/09/10
-                //snprintf(display_buf, sizeof(display_buf), "Command Detected:\nID: %d", mn_result->command_id[0]);
-                //app_lcd_set_status_text(display_buf);
-                
-
                 //send the speech command id back.
                 on_speech_command_detected((int)mn_result->command_id[0]);
 
@@ -172,6 +163,8 @@ void detect_Task(void *arg)
                 //app_lcd_set_status_text("Timeout!\nAwaiting Wakeword...");
                 char *display_timeout = GetCommandStringFromID(Command_Timeout);
                 lcd_text_print_ex(0, 120, display_timeout, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+
+                on_speech_command_detected((int)Command_Timeout); //send the speech command id back.
 
                 continue;
             }
