@@ -185,12 +185,7 @@ void app_main()
 {
 
     // 1. Initialize USB Stack
-    //app_usb_hid_init();
-
-    // Initialize LCD Module
-    //marked by Trion on 2026/09/09
-    // ESP_ERROR_CHECK(app_lcd_init());
-    // app_lcd_set_status_text("System Initializing...");
+    app_usb_hid_init();
 
     // Initialize the module directly
     ESP_ERROR_CHECK(lcd_text_init());
