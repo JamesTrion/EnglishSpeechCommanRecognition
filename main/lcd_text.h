@@ -142,7 +142,7 @@ uint16_t html_to_rgb565(const char *html_hex);
 void lcd_text_print_ex(uint16_t x, uint16_t y, const char *text, uint16_t fg_color, uint16_t bg_color, 
     bool bClearScreen,uint16_t unClearScreenWaitTime,uint16_t unWaitTimeAfterPrint, lcd_text_alignment alignment);
 
-char * GetCommandStringFromID(command_message_id command_id);
+const char * GetCommandStringFromID(command_message_id command_id);
 int GetSpeechCommandsCount(void);
 
 #ifdef __cplusplus

@@ -24,6 +24,8 @@
 #include "app_lcd.h"            // Added LCD module
 #include "lcd_text.h"
 
+
+
 int wakeup_flag = 0;
 static const esp_afe_sr_iface_t *afe_handle = NULL;
 static volatile int task_flag = 0;
@@ -154,6 +156,8 @@ void detect_Task(void *arg)
             if (mn_state == ESP_MN_STATE_TIMEOUT) 
             {
                 esp_mn_results_t *mn_result = multinet->get_results(model_data);
+                (void)mn_result;        //silence the unused variable warning
+
                 //printf("timeout, string:%s\n", mn_result->string);
                 afe_handle->enable_wakenet(afe_data);
                 wakeup_flag = 0;
@@ -186,6 +190,9 @@ void app_main()
 
     // 1. Initialize USB Stack
     app_usb_hid_init();
+    //vendor_hid_init(); // Initialize TinyUSB with Vendor-Defined HID interface
+    
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Allow TinyUSB PHY to stabilize
 
     // Initialize the module directly
     ESP_ERROR_CHECK(lcd_text_init());

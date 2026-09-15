@@ -425,7 +425,7 @@ void lcd_text_print_ex(uint16_t x, uint16_t y, const char *text, uint16_t fg_col
     vTaskDelay(pdMS_TO_TICKS(unWaitTimeAfterPrint));
 }
 
-char * GetCommandStringFromID(command_message_id command_id)
+const char * GetCommandStringFromID(command_message_id command_id)
 {
     return SpeechCommandsInString[command_id];
 }
