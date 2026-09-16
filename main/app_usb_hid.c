@@ -1,32 +1,40 @@
+#include "device/usbd.h"
+
 #include "app_usb_hid.h"
 #include "esp_log.h"
 #include "tinyusb.h"
 #include "class/hid/hid_device.h"
+#include "lcd_text.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "device/usbd_pvt.h"
 
 #define MAIN_CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
 
 static const char *TAG = "USB_HID";
 
-// Vendor-Defined HID Report Descriptor (32 bytes)
+// Vendor-Defined HID Report Descriptor (38 bytes)
 static const uint8_t custom_hid_report_descriptor[] = {
     0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined 0xFF00)
     0x09, 0x01,        // Usage (Vendor Usage 1)
     0xA1, 0x01,        // Collection (Application)
 
     // IN Report (Device -> Host)
+    0x85, HID_REPORT_ID_VOICE_CMD, // Report ID (1)
     0x09, 0x02,        //   Usage (Vendor Usage 2)
     0x15, 0x00,        //   Logical Minimum (0)
     0x26, 0xFF, 0x00,  //   Logical Maximum (255)
     0x75, 0x08,        //   Report Size (8 bits)
-    0x95, 0x40,        //   Report Count (64 bytes)
+    0x95, 0x3E,        //   Report Count (62 bytes + 1 byte Report ID = 63 bytes total)
     0x81, 0x02,        //   Input (Data, Variable, Absolute)
 
     // OUT Report (Host -> Device)
+    0x85, 0x02,        //   Report ID (2)
     0x09, 0x03,        //   Usage (Vendor Usage 3)
     0x15, 0x00,        //   Logical Minimum (0)
     0x26, 0xFF, 0x00,  //   Logical Maximum (255)
     0x75, 0x08,        //   Report Size (8 bits)
-    0x95, 0x40,        //   Report Count (64 bytes)
+    0x95, 0x3E,        //   Report Count (62 bytes)
     0x91, 0x02,        //   Output (Data, Variable, Absolute)
 
     0xC0               // End Collection
@@ -76,14 +84,6 @@ static const char *string_descriptors[] = {
     "123456"                   // 3: Serial
 };
 
-// uint8_t const *tud_descriptor_device_cb(void) {
-//     return (uint8_t const *)&vendor_device_descriptor;
-// }
-
-// uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
-//     (void)index;
-//     return hid_configuration_descriptor;
-// }
 
 uint16_t const *tud_string_desc_sing_cb(uint8_t index, uint16_t langid) {
     (void)langid;
@@ -128,46 +128,79 @@ bool tud_hid_set_idle_cb(uint8_t instance, uint8_t idle_rate) {
     return true;
 }
 
-/*
-uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
-    return 0;
+
+void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_t len) {
+    (void) instance;
+    (void) report;
+    (void) len;
+    // Endpoint transmission complete
+    // lcd_text_alignment nAlignment=LCD_TEXT_ALIGN_ANY;          //default alignment
+    // lcd_text_print_ex(0, 120, 
+    //             "Report finished sending", 
+    //             RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
 }
 
-void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t reqlen) {
-}
-*/
-
-void app_usb_hid_init(void) {
-
+void app_usb_hid_init(void) 
+{
     vendor_hid_init(); // Initialize TinyUSB with Vendor-Defined HID interface
-    return;
-
-    ESP_LOGI(TAG, "Initializing USB HID Device...");
-
-    const tinyusb_config_t tusb_cfg = {
-        .device_descriptor = NULL,
-        .string_descriptor = NULL,
-        .string_descriptor_count = 0,
-        .external_phy = false,
-        .configuration_descriptor = NULL,
-    };
-
-    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
-    ESP_LOGI(TAG, "USB HID Stack initialized successfully.");
 }
 
-void app_usb_hid_send_command_id(uint8_t command_id) {
-    if (tud_hid_ready()) {
-        uint8_t report_buf[64] = {0};
-        report_buf[0] = command_id;
-        tud_hid_report(HID_REPORT_ID_VOICE_CMD, report_buf, sizeof(report_buf));
-        ESP_LOGI(TAG, "Sent Voice Command Byte to USB Host: 0x%02X", command_id);
-    } else {
-        ESP_LOGW(TAG, "USB HID interface not ready to send.");
+void app_usb_hid_send_command_id(uint8_t command_id) 
+{
+
+    lcd_text_alignment nAlignment=LCD_TEXT_ALIGN_MIDDLECENTER;          //default alignment
+
+    if (!tud_mounted()) {
+        lcd_text_print_ex(0, 120, 
+                "USB Host not mounted yet", 
+                RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+        return;
     }
+
+    // Wait up to 50ms for the HID interface to clear
+    //original code commented out by Trion on 2026/09/16
+    int retry = 10;
+    while (!tud_hid_ready() && retry > 0) 
+    {
+        vTaskDelay(pdMS_TO_TICKS(5));
+        retry--;
+    }
+    
+
+    //original code commented out by Trion on 2026/09/16
+    if (tud_hid_ready()) 
+    {
+        uint8_t report_buf[62] = {0}; // Match 62-byte report count
+        report_buf[0] = command_id;
+
+        bool success = tud_hid_report(HID_REPORT_ID_VOICE_CMD, report_buf, sizeof(report_buf));
+        if (success) 
+        {
+            char display_buf[64];
+            memset(display_buf, 0, sizeof(display_buf));
+            snprintf(display_buf, sizeof(display_buf), "Command Sent: %s", GetCommandStringFromID(command_id));
+            lcd_text_print_ex(0, 120, display_buf, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+        } 
+        else 
+        {
+            char display_buf[64];
+            memset(display_buf, 0, sizeof(display_buf));
+            snprintf(display_buf, sizeof(display_buf), "command id ( %d ) failed", command_id);
+
+            lcd_text_print_ex(0, 120, display_buf, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+            ESP_LOGE(TAG, "Failed to queue HID report!");
+        }
+
+    } 
+    else 
+    {
+        lcd_text_print_ex(0, 120, "hid not ready", RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+    }
+
 }
 
 void vendor_hid_init(void) {
+    
     ESP_LOGI(TAG, "Initializing TinyUSB Stack...");
     const tinyusb_config_t tusb_cfg = {
         .device_descriptor = &vendor_device_descriptor,

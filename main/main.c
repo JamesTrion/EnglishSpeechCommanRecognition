@@ -90,6 +90,9 @@ void detect_Task(void *arg)
     while (task_flag) 
     {
         afe_fetch_result_t* res = afe_handle->fetch(afe_data); 
+
+        vTaskDelay(pdMS_TO_TICKS(1));   //add a short delay to avoid watchdog timeout error. The delay time can be adjusted based on the actual situation.
+
         if (!res || res->ret_value == ESP_FAIL) 
         {
             printf("fetch error!\n");
