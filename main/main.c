@@ -81,10 +81,6 @@ void detect_Task(void *arg)
     //print active speech commands
     multinet->print_active_speech_commands(model_data);
 
-
-    lcd_text_alignment nAlignment=LCD_TEXT_ALIGN_MIDDLECENTER;          //default alignment
-    char *display_text = GetCommandStringFromID(Command_ListeningForWakeword);
-    lcd_text_print_ex(0, 120, display_text, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
     on_speech_command_detected((int)Command_ListeningForWakeword); //send the speech command id back.
 
     while (task_flag) 
@@ -102,10 +98,6 @@ void detect_Task(void *arg)
         if (res->wakeup_state == WAKENET_DETECTED) 
         {
             printf("WAKEWORD DETECTED\n");
-
-            lcd_text_print_ex(0, 120, 
-                GetCommandStringFromID(Command_WakewordDetected), 
-                RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
 
             on_speech_command_detected((int)Command_WakewordDetected); //send the speech command id back.
 
@@ -147,10 +139,6 @@ void detect_Task(void *arg)
                 printf("Final command id: %d\n",mn_result->command_id[0]);
                 printf("-----------listening-----------\n");
 
-                char display_buf[64];
-                snprintf(display_buf, sizeof(display_buf), "Command Detected: %s", GetCommandStringFromID(mn_result->command_id[0]));
-                lcd_text_print_ex(0, 120, display_buf, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
-
                 //send the speech command id back.
                 on_speech_command_detected((int)mn_result->command_id[0]);
 
@@ -166,10 +154,6 @@ void detect_Task(void *arg)
                 wakeup_flag = 0;
                 printf("ESP listening time out.\n");
                 printf("\n-----------awaits to be waken up-----------\n");
-
-                //app_lcd_set_status_text("Timeout!\nAwaiting Wakeword...");
-                char *display_timeout = GetCommandStringFromID(Command_Timeout);
-                lcd_text_print_ex(0, 120, display_timeout, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
 
                 on_speech_command_detected((int)Command_Timeout); //send the speech command id back.
 
@@ -214,19 +198,8 @@ void app_main()
     afe_config_free(afe_config);
 #endif
 
-    // Initialize LCD Module
-    // ESP_ERROR_CHECK(app_lcd_init());
-    // app_lcd_set_status_text("System Initializing...");   //marked by Trion on 2026/09/09
-    
-
     task_flag = 1;
     xTaskCreatePinnedToCore(&detect_Task, "detect", 8 * 1024, (void*)afe_data, 5, NULL, 1);
     xTaskCreatePinnedToCore(&feed_Task, "feed", 8 * 1024, (void*)afe_data, 5, NULL, 0);
-
-    // Clear screen to White (0x0000)
-    //lcd_text_clear(RGB565_WHITE);
-    
-    // lcd_text_alignment nAlignment=LCD_TEXT_ALIGN_MIDDLECENTER;          //default alignment
-    // lcd_text_print_ex(0, 120, "Hello World", RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
  
 }

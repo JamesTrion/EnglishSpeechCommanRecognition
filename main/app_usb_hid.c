@@ -166,36 +166,28 @@ void app_usb_hid_send_command_id(uint8_t command_id)
         retry--;
     }
     
+    bool bReady=true;
+    char display_buf[64];
+    memset(display_buf, 0, sizeof(display_buf));
+    snprintf(display_buf, sizeof(display_buf), "%s", GetCommandStringFromID(command_id));
 
-    //original code commented out by Trion on 2026/09/16
-    if (tud_hid_ready()) 
+    if (tud_hid_ready()==0)
     {
-        uint8_t report_buf[62] = {0}; // Match 62-byte report count
-        report_buf[0] = command_id;
-
-        bool success = tud_hid_report(HID_REPORT_ID_VOICE_CMD, report_buf, sizeof(report_buf));
-        if (success) 
-        {
-            char display_buf[64];
-            memset(display_buf, 0, sizeof(display_buf));
-            snprintf(display_buf, sizeof(display_buf), "Command Sent: %s", GetCommandStringFromID(command_id));
-            lcd_text_print_ex(0, 120, display_buf, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
-        } 
-        else 
-        {
-            char display_buf[64];
-            memset(display_buf, 0, sizeof(display_buf));
-            snprintf(display_buf, sizeof(display_buf), "command id ( %d ) failed", command_id);
-
-            lcd_text_print_ex(0, 120, display_buf, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
-            ESP_LOGE(TAG, "Failed to queue HID report!");
-        }
-
-    } 
-    else 
-    {
-        lcd_text_print_ex(0, 120, "hid not ready", RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+        bReady=false;
+        memset(display_buf, 0, sizeof(display_buf));
+        snprintf(display_buf, sizeof(display_buf), "%s", GetCommandStringFromID(command_id));
     }
+
+    lcd_text_print_ex(0, 120, display_buf, RGB565_BLACK, RGB565_WHITE, true, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
+
+    uint8_t report_buf[62] = {0}; // Match 62-byte report count
+    report_buf[0] = command_id;
+        
+    bool success = tud_hid_report(HID_REPORT_ID_VOICE_CMD, report_buf, sizeof(report_buf));
+    nAlignment=LCD_TEXT_ALIGN_ANY;
+    int nAddHeight=60;
+    snprintf(display_buf, sizeof(display_buf), "%s runs %d.", GetCommandStringFromID(command_id),success);
+    //lcd_text_print_ex(0, 120 + nAddHeight, display_buf, RGB565_BLACK, RGB565_WHITE, false, 50, 100, nAlignment); // Clear screen to White and print "Hello World" in Black
 
 }
 

@@ -6,7 +6,10 @@ idf_component_register(
         "app_lcd.c"
         "lcd_text.c"
     INCLUDE_DIRS "." "include"
-    PRIV_REQUIRES espressif__esp_tinyusb espressif__tinyusb hardware_driver esp_lcd lvgl driver
+    REQUIRES
+        hardware_driver
+    # PRIV_REQUIRES espressif__esp_tinyusb espressif__tinyusb hardware_driver esp_lcd lvgl driver
+    PRIV_REQUIRES espressif__esp_tinyusb espressif__tinyusb esp_lcd lvgl driver
 )
 
 # Force CFG_TUD_HID=1 on both the main library AND tinyusb component
